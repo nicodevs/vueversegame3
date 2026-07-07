@@ -1,14 +1,13 @@
 <script setup lang="ts">
-export interface Power {
+export interface PowerButton {
   id: string
   icon: string
   label: string
-  count: number
+  disabled: boolean
 }
 
 defineProps<{
-  powers: Power[]
-  disabled?: boolean
+  powers: PowerButton[]
 }>()
 
 const emit = defineEmits<{
@@ -22,13 +21,12 @@ const emit = defineEmits<{
       v-for="power in powers"
       :key="power.id"
       class="power"
-      :disabled="disabled || power.count <= 0"
+      :disabled="power.disabled"
       :aria-label="power.label"
       :title="power.label"
       @click="emit('use', power.id)"
     >
       <span class="power__icon" aria-hidden="true">{{ power.icon }}</span>
-      <span class="power__count">×{{ power.count }}</span>
     </button>
   </div>
 </template>

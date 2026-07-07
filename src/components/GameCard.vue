@@ -3,7 +3,6 @@ import type { Card } from '@/composables/useGame'
 
 const props = defineProps<{
   card: Card
-  peek?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -19,12 +18,12 @@ function onClick() {
   <button
     class="card"
     :class="{
-      'card--up': card.faceUp || (peek && !card.matched),
+      'card--up': card.faceUp || card.peeking,
       'card--vanishing': card.vanishing,
       'card--matched': card.matched,
     }"
-    :disabled="card.faceUp || card.matched || peek"
-    :aria-label="card.faceUp ? card.emoji : 'Hidden card'"
+    :disabled="card.faceUp || card.matched || card.peeking"
+    :aria-label="card.faceUp || card.peeking ? card.emoji : 'Hidden card'"
     @click="onClick"
   >
     <span class="card__inner">

@@ -8,6 +8,7 @@ export interface Card {
   faceUp: boolean
   matched: boolean
   vanishing: boolean
+  peeking: boolean
 }
 
 const MATCH_PAUSE = 500
@@ -35,6 +36,7 @@ function buildBoard(level: number): Card[] {
     faceUp: false,
     matched: false,
     vanishing: false,
+    peeking: false,
   }))
   return cards
 }
@@ -49,7 +51,6 @@ export function useGame(startLevel = 1) {
   const status = ref<'playing' | 'won' | 'lost'>('playing')
   const started = ref(false)
   const busy = ref(false)
-  const peeking = ref(false)
 
   const timers = new Set<ReturnType<typeof setTimeout>>()
   let tick: ReturnType<typeof setInterval> | undefined
@@ -96,9 +97,9 @@ export function useGame(startLevel = 1) {
     clearTimers()
     selection.splice(0)
     busy.value = false
-    peeking.value = false
     // Reveal every face-down card (they don't count as matches).
     for (const card of cards.value) {
+      card.peeking = false
       if (!card.matched) card.faceUp = true
     }
   }
@@ -115,7 +116,6 @@ export function useGame(startLevel = 1) {
     status.value = 'playing'
     started.value = false
     busy.value = false
-    peeking.value = false
     // The countdown does not begin until the start overlay is dismissed.
   }
 
@@ -191,13 +191,16 @@ export function useGame(startLevel = 1) {
     hp.value = Math.min(maxHp.value, hp.value + amount)
   }
 
-  function peekAll(ms: number) {
-    if (status.value !== 'playing' || peeking.value || busy.value) return
-    peeking.value = true
-    busy.value = true
+  // Temporarily reveal every face-down card whose emoji is in the given set.
+  // Peeked cards don't count as a selection, can't match, and can't be clicked;
+  // other face-down cards stay clickable. Each peek runs on its own timer.
+  function peekCategory(emojis: readonly string[], ms: number) {
+    if (status.value !== 'playing') return
+    const set = new Set(emojis)
+    const targets = cards.value.filter((c) => !c.matched && !c.faceUp && set.has(c.emoji))
+    for (const card of targets) card.peeking = true
     later(() => {
-      peeking.value = false
-      if (selection.length < 2) busy.value = false
+      for (const card of targets) card.peeking = false
     }, ms)
   }
 
@@ -224,7 +227,6 @@ export function useGame(startLevel = 1) {
     secondsLeft,
     status,
     started,
-    peeking,
     cols,
     remaining,
     flip,
@@ -232,7 +234,7 @@ export function useGame(startLevel = 1) {
     nextLevel,
     retry,
     heal,
-    peekAll,
+    peekCategory,
     freezeClock,
     startClock,
     stopClock,

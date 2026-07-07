@@ -5,12 +5,15 @@ import IconButton from '@/components/IconButton.vue'
 import GameCard from '@/components/GameCard.vue'
 import HpBar from '@/components/HpBar.vue'
 import CountdownTimer from '@/components/CountdownTimer.vue'
-import PowersBar, { type Power } from '@/components/PowersBar.vue'
+import PowersBar from '@/components/PowersBar.vue'
 import AppButton from '@/components/AppButton.vue'
 import GameOverlay from '@/components/GameOverlay.vue'
 import VictoryScreen from '@/screens/VictoryScreen.vue'
 import { useGame } from '@/composables/useGame'
 import { useWallet } from '@/composables/useWallet'
+import { useInventory } from '@/composables/useInventory'
+import { POWERS, type PowerDef } from '@/game/powers'
+import { CATEGORIES } from '@/game/emojis'
 
 const emit = defineEmits<{
   exit: []
@@ -19,6 +22,7 @@ const emit = defineEmits<{
 
 const game = useGame(1)
 const wallet = useWallet()
+const inventory = useInventory()
 const soundOn = ref(true)
 
 // The start overlay is shown while the level is loaded but not yet started.
@@ -34,30 +38,48 @@ watch(
   },
 )
 
-const powers = reactive<Power[]>([
-  { id: 'reveal', icon: '👁️', label: 'Reveal all cards briefly', count: 2 },
-  { id: 'freeze', icon: '❄️', label: 'Freeze the timer', count: 2 },
-  { id: 'heal', icon: '❤️', label: 'Restore 1 HP', count: 2 },
-])
+// Powers already used this level are disabled until the next level.
+const usedThisLevel = reactive(new Set<string>())
 
-function usePower(id: string) {
-  const power = powers.find((p) => p.id === id)
-  if (!power || power.count <= 0 || game.status.value !== 'playing') return
+// Reset per-level usage whenever a new level session begins.
+watch(
+  () => game.level.value,
+  () => usedThisLevel.clear(),
+)
 
-  if (id === 'reveal') game.peekAll(1200)
-  else if (id === 'freeze') game.freezeClock(5000)
-  else if (id === 'heal') game.heal(1)
+const powerButtons = computed(() =>
+  POWERS.filter((p) => inventory.has(p.id)).map((p) => ({
+    id: p.id,
+    icon: p.icon,
+    label: `${p.name} — ${p.description}`,
+    disabled: usedThisLevel.has(p.id) || game.status.value !== 'playing',
+  })),
+)
 
-  power.count -= 1
+function applyPower(def: PowerDef) {
+  if (def.id === 'snack') {
+    game.heal(5)
+  } else if (def.id === 'time-stop') {
+    game.freezeClock(5000)
+  } else if (def.category) {
+    const category = CATEGORIES.find((c) => c.name === def.category)
+    if (category) game.peekCategory(category.emojis, 1000)
+  }
 }
 
-function resetPowers() {
-  powers.forEach((p) => (p.count = 2))
+function usePower(id: string) {
+  const def = POWERS.find((p) => p.id === id)
+  if (!def || !inventory.has(id) || usedThisLevel.has(id) || game.status.value !== 'playing') return
+
+  applyPower(def)
+  usedThisLevel.add(id)
+  // Consumables are spent: they leave the inventory once used.
+  if (def.kind === 'consumable') inventory.remove(id)
 }
 
 function onRetry() {
+  usedThisLevel.clear()
   game.retry()
-  resetPowers()
 }
 
 function onStart() {
@@ -95,18 +117,13 @@ function onStart() {
               v-for="card in game.cards.value"
               :key="card.id"
               :card="card"
-              :peek="game.peeking.value"
               @flip="game.flip"
             />
           </div>
 
           <div class="play__side">
             <HpBar :hp="game.hp.value" :max="game.maxHp.value" />
-            <PowersBar
-              :powers="powers"
-              :disabled="game.status.value !== 'playing'"
-              @use="usePower"
-            />
+            <PowersBar :powers="powerButtons" @use="usePower" />
           </div>
         </div>
       </div>
