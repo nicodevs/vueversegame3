@@ -1,6 +1,6 @@
 import { computed, onScopeDispose, reactive, ref } from 'vue'
 import { EMOJI_POOL } from '@/game/emojis'
-import { levelConfig } from '@/game/levels'
+import { levelConfig, levelDuration } from '@/game/levels'
 
 export interface Card {
   id: number
@@ -47,6 +47,7 @@ export function useGame(startLevel = 1) {
   const maxHp = ref(START_HP)
   const secondsLeft = ref(0)
   const status = ref<'playing' | 'won' | 'lost'>('playing')
+  const started = ref(false)
   const busy = ref(false)
   const peeking = ref(false)
 
@@ -104,16 +105,27 @@ export function useGame(startLevel = 1) {
 
   function startLevelSession(nextLevel: number) {
     clearTimers()
+    stopClock()
     level.value = nextLevel
     cards.value = buildBoard(nextLevel)
     selection.splice(0)
     hp.value = START_HP
     maxHp.value = START_HP
-    const { cols: c, rows } = levelConfig(nextLevel)
-    secondsLeft.value = c * rows * 5
+    secondsLeft.value = levelDuration(nextLevel)
     status.value = 'playing'
+    started.value = false
     busy.value = false
-    startClock()
+    peeking.value = false
+    // The countdown does not begin until the start overlay is dismissed.
+  }
+
+  function start() {
+    if (started.value || status.value !== 'playing') return
+    started.value = true
+    // Countdown begins once the start overlay finishes fading out (300ms).
+    later(() => {
+      if (status.value === 'playing') startClock()
+    }, 300)
   }
 
   function resolveMatch(a: Card, b: Card) {
@@ -211,10 +223,12 @@ export function useGame(startLevel = 1) {
     maxHp,
     secondsLeft,
     status,
+    started,
     peeking,
     cols,
     remaining,
     flip,
+    start,
     nextLevel,
     retry,
     heal,

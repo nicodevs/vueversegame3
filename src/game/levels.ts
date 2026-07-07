@@ -9,3 +9,9 @@ export function levelConfig(level: number): LevelConfig {
   if (level === 2) return { cols: 4, rows: 3 }
   return { cols: 4, rows: 4 }
 }
+
+// Timer duration in seconds: (level + 1) × 10.
+// Level 1: 20s, Level 2: 30s, Level 3: 40s, ...
+export function levelDuration(level: number): number {
+  return (level + 1) * 10
+}

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import GameLayout from '@/components/GameLayout.vue'
 import IconButton from '@/components/IconButton.vue'
 import GameCard from '@/components/GameCard.vue'
@@ -16,6 +16,9 @@ const emit = defineEmits<{
 
 const game = useGame(1)
 const soundOn = ref(true)
+
+// The start overlay is shown while the level is loaded but not yet started.
+const showStartOverlay = computed(() => !game.started.value && game.status.value === 'playing')
 
 const powers = reactive<Power[]>([
   { id: 'reveal', icon: '👁️', label: 'Reveal all cards briefly', count: 2 },
@@ -46,6 +49,10 @@ function onNext() {
 function onRetry() {
   game.retry()
   resetPowers()
+}
+
+function onStart() {
+  game.start()
 }
 </script>
 
@@ -94,8 +101,20 @@ function onRetry() {
     </div>
   </div>
 
+  <!-- Level start overlay -->
+  <Transition name="overlay-fade" appear>
+    <GameOverlay v-if="showStartOverlay" emoji="🚀" :title="`Level ${game.level.value}`">
+      <AppButton @click="onStart">Start</AppButton>
+      <AppButton v-if="game.level.value >= 2" variant="ghost" @click="emit('exit')">
+        Main Menu
+      </AppButton>
+    </GameOverlay>
+  </Transition>
+
   <!-- Game Over overlay -->
-  <GameOverlay v-if="game.status.value === 'lost'" emoji="🤬" title="Game Over">
-    <AppButton @click="onRetry">Try Again</AppButton>
-  </GameOverlay>
+  <Transition name="overlay-fade">
+    <GameOverlay v-if="game.status.value === 'lost'" emoji="🤬" title="Game Over">
+      <AppButton @click="onRetry">Try Again</AppButton>
+    </GameOverlay>
+  </Transition>
 </template>

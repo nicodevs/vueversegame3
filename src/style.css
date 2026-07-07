@@ -453,7 +453,17 @@ button {
   padding: 1.5rem;
   background: rgba(10, 5, 22, 0.7);
   backdrop-filter: blur(6px);
-  animation: overlay-fade-in 0.3s ease both;
+}
+
+/* Overlay fade in/out (300ms) — used by the level start and Game Over overlays. */
+.overlay-fade-enter-active,
+.overlay-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.overlay-fade-enter-from,
+.overlay-fade-leave-to {
+  opacity: 0;
 }
 
 .game-overlay__content {
@@ -483,13 +493,4 @@ button {
   flex-direction: column;
   gap: 0.9rem;
   width: min(80vw, 16rem);
-}
-
-@keyframes overlay-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
 }
