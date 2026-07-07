@@ -1,9 +1,8 @@
 import { reactive } from 'vue'
-import { POWERS } from '@/game/powers'
 
 // Module-level singleton so the owned powers persist across screens and levels.
-// For now the player owns every power; the shop will change the starting set.
-const owned = reactive(new Set<string>(POWERS.map((p) => p.id)))
+// The player starts with no powers; they are bought in the shop.
+const owned = reactive(new Set<string>())
 
 export function useInventory() {
   function has(id: string): boolean {

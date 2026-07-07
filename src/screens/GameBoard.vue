@@ -15,12 +15,14 @@ import { useInventory } from '@/composables/useInventory'
 import { POWERS, type PowerDef } from '@/game/powers'
 import { CATEGORIES } from '@/game/emojis'
 
+const props = withDefaults(defineProps<{ level?: number }>(), { level: 1 })
+
 const emit = defineEmits<{
   exit: []
   shop: []
 }>()
 
-const game = useGame(1)
+const game = useGame(props.level)
 const wallet = useWallet()
 const inventory = useInventory()
 const soundOn = ref(true)

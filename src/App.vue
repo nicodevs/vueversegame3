@@ -7,12 +7,34 @@ import GameBoard from '@/screens/GameBoard.vue'
 type Screen = 'menu' | 'game' | 'shop'
 
 const screen = ref<Screen>('menu')
+const currentLevel = ref(1)
+
+function play() {
+  currentLevel.value = 1
+  screen.value = 'game'
+}
+
+// From the shop, CONTINUE advances to the next level's start overlay.
+function continueToNextLevel() {
+  currentLevel.value += 1
+  screen.value = 'game'
+}
 </script>
 
 <template>
   <div class="app-shell">
-    <MainMenu v-if="screen === 'menu'" @play="screen = 'game'" />
-    <ShopScreen v-else-if="screen === 'shop'" @back="screen = 'menu'" />
-    <GameBoard v-else @exit="screen = 'menu'" @shop="screen = 'shop'" />
+    <MainMenu v-if="screen === 'menu'" @play="play" />
+    <ShopScreen
+      v-else-if="screen === 'shop'"
+      @back="screen = 'menu'"
+      @continue="continueToNextLevel"
+    />
+    <GameBoard
+      v-else
+      :key="currentLevel"
+      :level="currentLevel"
+      @exit="screen = 'menu'"
+      @shop="screen = 'shop'"
+    />
   </div>
 </template>
