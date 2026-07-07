@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import GameLayout from '@/components/GameLayout.vue'
 import IconButton from '@/components/IconButton.vue'
 import GameCard from '@/components/GameCard.vue'
@@ -8,17 +8,31 @@ import CountdownTimer from '@/components/CountdownTimer.vue'
 import PowersBar, { type Power } from '@/components/PowersBar.vue'
 import AppButton from '@/components/AppButton.vue'
 import GameOverlay from '@/components/GameOverlay.vue'
+import VictoryScreen from '@/screens/VictoryScreen.vue'
 import { useGame } from '@/composables/useGame'
+import { useWallet } from '@/composables/useWallet'
 
 const emit = defineEmits<{
   exit: []
+  shop: []
 }>()
 
 const game = useGame(1)
+const wallet = useWallet()
 const soundOn = ref(true)
 
 // The start overlay is shown while the level is loaded but not yet started.
 const showStartOverlay = computed(() => !game.started.value && game.status.value === 'playing')
+
+// Coins earned this level = time left + lives left (both frozen at the win).
+const coinsEarned = computed(() => game.secondsLeft.value + game.hp.value)
+
+watch(
+  () => game.status.value,
+  (status) => {
+    if (status === 'won') wallet.add(coinsEarned.value)
+  },
+)
 
 const powers = reactive<Power[]>([
   { id: 'reveal', icon: '👁️', label: 'Reveal all cards briefly', count: 2 },
@@ -41,11 +55,6 @@ function resetPowers() {
   powers.forEach((p) => (p.count = 2))
 }
 
-function onNext() {
-  game.nextLevel()
-  resetPowers()
-}
-
 function onRetry() {
   game.retry()
   resetPowers()
@@ -57,64 +66,67 @@ function onStart() {
 </script>
 
 <template>
-  <GameLayout>
-    <template #header>
-      <IconButton label="Close game" @click="emit('exit')">✕</IconButton>
-      <h1 class="layout__title">Level {{ game.level.value }}</h1>
-      <IconButton :label="soundOn ? 'Mute sound' : 'Unmute sound'" @click="soundOn = !soundOn">
-        {{ soundOn ? '🔊' : '🔇' }}
-      </IconButton>
-    </template>
+  <VictoryScreen
+    v-if="game.status.value === 'won'"
+    :level="game.level.value"
+    :time-left="game.secondsLeft.value"
+    :lives-left="game.hp.value"
+    :coins-earned="coinsEarned"
+    :total-coins="wallet.coins.value"
+    @continue="emit('shop')"
+  />
 
-    <div class="play">
-      <CountdownTimer :seconds="game.secondsLeft.value" />
+  <template v-else>
+    <GameLayout>
+      <template #header>
+        <IconButton label="Close game" @click="emit('exit')">✕</IconButton>
+        <h1 class="layout__title">Level {{ game.level.value }}</h1>
+        <IconButton :label="soundOn ? 'Mute sound' : 'Unmute sound'" @click="soundOn = !soundOn">
+          {{ soundOn ? '🔊' : '🔇' }}
+        </IconButton>
+      </template>
 
-      <div class="play__row">
-        <div class="board" :style="{ gridTemplateColumns: `repeat(${game.cols.value}, 1fr)` }">
-          <GameCard
-            v-for="card in game.cards.value"
-            :key="card.id"
-            :card="card"
-            :peek="game.peeking.value"
-            @flip="game.flip"
-          />
-        </div>
+      <div class="play">
+        <CountdownTimer :seconds="game.secondsLeft.value" />
 
-        <div class="play__side">
-          <HpBar :hp="game.hp.value" :max="game.maxHp.value" />
-          <PowersBar :powers="powers" :disabled="game.status.value !== 'playing'" @use="usePower" />
+        <div class="play__row">
+          <div class="board" :style="{ gridTemplateColumns: `repeat(${game.cols.value}, 1fr)` }">
+            <GameCard
+              v-for="card in game.cards.value"
+              :key="card.id"
+              :card="card"
+              :peek="game.peeking.value"
+              @flip="game.flip"
+            />
+          </div>
+
+          <div class="play__side">
+            <HpBar :hp="game.hp.value" :max="game.maxHp.value" />
+            <PowersBar
+              :powers="powers"
+              :disabled="game.status.value !== 'playing'"
+              @use="usePower"
+            />
+          </div>
         </div>
       </div>
-    </div>
-  </GameLayout>
+    </GameLayout>
 
-  <!-- Victory overlay -->
-  <div v-if="game.status.value === 'won'" class="overlay">
-    <div class="overlay__card">
-      <div class="confetti" aria-hidden="true">🎉</div>
-      <h2 class="screen__title">Level {{ game.level.value }} cleared!</h2>
-      <p class="screen__subtitle">Nicely matched. Ready for the next challenge?</p>
-      <div class="screen__actions">
-        <AppButton @click="onNext">▶ Next Level</AppButton>
-        <AppButton variant="ghost" @click="emit('exit')">🏠 Main Menu</AppButton>
-      </div>
-    </div>
-  </div>
+    <!-- Level start overlay -->
+    <Transition name="overlay-fade" appear>
+      <GameOverlay v-if="showStartOverlay" emoji="🚀" :title="`Level ${game.level.value}`">
+        <AppButton @click="onStart">Start</AppButton>
+        <AppButton v-if="game.level.value >= 2" variant="ghost" @click="emit('exit')">
+          Main Menu
+        </AppButton>
+      </GameOverlay>
+    </Transition>
 
-  <!-- Level start overlay -->
-  <Transition name="overlay-fade" appear>
-    <GameOverlay v-if="showStartOverlay" emoji="🚀" :title="`Level ${game.level.value}`">
-      <AppButton @click="onStart">Start</AppButton>
-      <AppButton v-if="game.level.value >= 2" variant="ghost" @click="emit('exit')">
-        Main Menu
-      </AppButton>
-    </GameOverlay>
-  </Transition>
-
-  <!-- Game Over overlay -->
-  <Transition name="overlay-fade">
-    <GameOverlay v-if="game.status.value === 'lost'" emoji="🤬" title="Game Over">
-      <AppButton @click="onRetry">Try Again</AppButton>
-    </GameOverlay>
-  </Transition>
+    <!-- Game Over overlay -->
+    <Transition name="overlay-fade">
+      <GameOverlay v-if="game.status.value === 'lost'" emoji="🤬" title="Game Over">
+        <AppButton @click="onRetry">Try Again</AppButton>
+      </GameOverlay>
+    </Transition>
+  </template>
 </template>

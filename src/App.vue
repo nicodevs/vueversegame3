@@ -13,6 +13,6 @@ const screen = ref<Screen>('menu')
   <div class="app-shell">
     <MainMenu v-if="screen === 'menu'" @play="screen = 'game'" @shop="screen = 'shop'" />
     <ShopScreen v-else-if="screen === 'shop'" @back="screen = 'menu'" />
-    <GameBoard v-else @exit="screen = 'menu'" />
+    <GameBoard v-else @exit="screen = 'menu'" @shop="screen = 'shop'" />
   </div>
 </template>

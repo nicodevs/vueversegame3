@@ -4,7 +4,7 @@
 
 <template>
   <div class="layout">
-    <header class="layout__header">
+    <header v-if="$slots.header" class="layout__header">
       <slot name="header" />
     </header>
 
