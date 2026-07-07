@@ -440,3 +440,56 @@ button {
     transform: scale(1.25);
   }
 }
+
+/* ---------- Reusable game overlay (Game Over, level start, ...) ---------- */
+
+.game-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(10, 5, 22, 0.7);
+  backdrop-filter: blur(6px);
+  animation: overlay-fade-in 0.3s ease both;
+}
+
+.game-overlay__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  text-align: center;
+  width: min(90vw, 22rem);
+}
+
+.game-overlay__emoji {
+  font-size: clamp(3.5rem, 18vw, 6rem);
+  line-height: 1;
+  animation: pop 0.5s ease;
+}
+
+.game-overlay__title {
+  font-size: clamp(2rem, 9vw, 3rem);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+
+.game-overlay__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  width: min(80vw, 16rem);
+}
+
+@keyframes overlay-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

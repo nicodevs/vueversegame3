@@ -7,6 +7,7 @@ import HpBar from '@/components/HpBar.vue'
 import CountdownTimer from '@/components/CountdownTimer.vue'
 import PowersBar, { type Power } from '@/components/PowersBar.vue'
 import AppButton from '@/components/AppButton.vue'
+import GameOverlay from '@/components/GameOverlay.vue'
 import { useGame } from '@/composables/useGame'
 
 const emit = defineEmits<{
@@ -93,18 +94,8 @@ function onRetry() {
     </div>
   </div>
 
-  <!-- Defeat overlay -->
-  <div v-if="game.status.value === 'lost'" class="overlay">
-    <div class="overlay__card">
-      <div class="confetti" aria-hidden="true">💀</div>
-      <h2 class="screen__title">Game Over</h2>
-      <p class="screen__subtitle">
-        You ran out of {{ game.hp.value === 0 ? 'HP' : 'time' }}. Try again!
-      </p>
-      <div class="screen__actions">
-        <AppButton @click="onRetry">↻ Retry Level</AppButton>
-        <AppButton variant="ghost" @click="emit('exit')">🏠 Main Menu</AppButton>
-      </div>
-    </div>
-  </div>
+  <!-- Game Over overlay -->
+  <GameOverlay v-if="game.status.value === 'lost'" emoji="🤬" title="Game Over">
+    <AppButton @click="onRetry">Try Again</AppButton>
+  </GameOverlay>
 </template>

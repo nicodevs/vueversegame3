@@ -1,4 +1,4 @@
-import { computed, onScopeDispose, reactive, ref, shallowRef } from 'vue'
+import { computed, onScopeDispose, reactive, ref } from 'vue'
 import { EMOJI_POOL } from '@/game/emojis'
 import { levelConfig } from '@/game/levels'
 
@@ -12,7 +12,7 @@ export interface Card {
 
 const MATCH_PAUSE = 500
 const FLIP_BACK_PAUSE = 800
-const START_HP = 5
+const START_HP = 10
 
 function shuffle<T>(items: T[]): T[] {
   const result = items.slice()
@@ -41,7 +41,7 @@ function buildBoard(level: number): Card[] {
 
 export function useGame(startLevel = 1) {
   const level = ref(startLevel)
-  const cards = shallowRef<Card[]>([])
+  const cards = ref<Card[]>([])
   const selection = reactive<Card[]>([])
   const hp = ref(START_HP)
   const maxHp = ref(START_HP)
@@ -83,10 +83,23 @@ export function useGame(startLevel = 1) {
       secondsLeft.value -= 1
       if (secondsLeft.value <= 0) {
         secondsLeft.value = 0
-        stopClock()
-        status.value = 'lost'
+        loseGame()
       }
     }, 1000)
+  }
+
+  function loseGame() {
+    if (status.value !== 'playing') return
+    status.value = 'lost'
+    stopClock()
+    clearTimers()
+    selection.splice(0)
+    busy.value = false
+    peeking.value = false
+    // Reveal every face-down card (they don't count as matches).
+    for (const card of cards.value) {
+      if (!card.matched) card.faceUp = true
+    }
   }
 
   function startLevelSession(nextLevel: number) {
@@ -130,8 +143,7 @@ export function useGame(startLevel = 1) {
       b.faceUp = false
     }, FLIP_BACK_PAUSE)
     if (hp.value === 0) {
-      status.value = 'lost'
-      stopClock()
+      loseGame()
     }
   }
 
