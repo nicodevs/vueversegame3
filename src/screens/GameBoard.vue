@@ -126,6 +126,9 @@ function onStart() {
     <Transition name="overlay-fade">
       <GameOverlay v-if="game.status.value === 'lost'" emoji="🤬" title="Game Over">
         <AppButton @click="onRetry">Try Again</AppButton>
+        <AppButton v-if="game.level.value >= 2" variant="ghost" @click="emit('exit')">
+          Main Menu
+        </AppButton>
       </GameOverlay>
     </Transition>
   </template>
